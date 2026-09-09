@@ -1,0 +1,8 @@
+# Build output
+/build/
+*.o
+*.obj
+
+# Test assets (fetched by script, not vendored)
+tests/roms/
+tests/golden/*.trace
