@@ -11,6 +11,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package(SDL2 REQUIRED)
 
 add_executable(nesemu
+    src/cart.c
     src/main.c
 )
 

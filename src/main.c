@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "nes/cart.h"
 #include "nes/types.h"
 
 #define NES_SCREEN_WIDTH  256
@@ -12,15 +13,32 @@
 int main(int argc, char **argv) {
     SDL_SetMainReady();
 
-    const char *rom_path = (argc > 1) ? argv[1] : NULL;
-    if (rom_path != NULL) {
-        printf("ROM path: %s\n", rom_path);
-    } else {
-        printf("Usage: %s <rom_path>\n", argv[0]);
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <rom_path>\n", argv[0]);
+        return 1;
     }
+
+    const char *rom_path = argv[1];
+    nes_cart cart;
+    const nes_cart_result load_result = nes_cart_load_file(&cart, rom_path);
+    if (load_result != NES_CART_OK) {
+        fprintf(stderr, "Failed to load '%s': %s\n", rom_path,
+                nes_cart_result_str(load_result));
+        return 1;
+    }
+
+    printf("Loaded %s\n", rom_path);
+    printf("  format:    %s\n", cart.is_nes2 ? "NES 2.0" : "iNES");
+    printf("  mapper:    %u (NROM)\n", (unsigned)cart.mapper);
+    printf("  PRG-ROM:   %u KiB\n", (unsigned)(cart.prg_size / 1024u));
+    printf("  CHR-%s:   %u KiB\n", cart.chr_is_ram ? "RAM" : "ROM",
+           (unsigned)(cart.chr_size / 1024u));
+    printf("  mirroring: %s\n", nes_mirroring_str(cart.mirroring));
+    printf("  battery:   %s\n", cart.has_battery ? "yes" : "no");
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
+        nes_cart_unload(&cart);
         return 1;
     }
 
@@ -35,6 +53,7 @@ int main(int argc, char **argv) {
     if (window == NULL) {
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
         SDL_Quit();
+        nes_cart_unload(&cart);
         return 1;
     }
 
@@ -54,6 +73,7 @@ int main(int argc, char **argv) {
 
     SDL_DestroyWindow(window);
     SDL_Quit();
+    nes_cart_unload(&cart);
 
     return 0;
 }
