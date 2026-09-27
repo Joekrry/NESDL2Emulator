@@ -56,6 +56,28 @@ typedef struct {
     bool page_crossed;  /* indexing or the branch target crossed a page */
 } nes_operand;
 
+/* Instruction identity. Unofficial opcodes arrive in a later commit. */
+typedef enum {
+    NES_OP_ADC, NES_OP_AND, NES_OP_ASL, NES_OP_BCC, NES_OP_BCS, NES_OP_BEQ,
+    NES_OP_BIT, NES_OP_BMI, NES_OP_BNE, NES_OP_BPL, NES_OP_BRK, NES_OP_BVC,
+    NES_OP_BVS, NES_OP_CLC, NES_OP_CLD, NES_OP_CLI, NES_OP_CLV, NES_OP_CMP,
+    NES_OP_CPX, NES_OP_CPY, NES_OP_DEC, NES_OP_DEX, NES_OP_DEY, NES_OP_EOR,
+    NES_OP_INC, NES_OP_INX, NES_OP_INY, NES_OP_JMP, NES_OP_JSR, NES_OP_LDA,
+    NES_OP_LDX, NES_OP_LDY, NES_OP_LSR, NES_OP_NOP, NES_OP_ORA, NES_OP_PHA,
+    NES_OP_PHP, NES_OP_PLA, NES_OP_PLP, NES_OP_ROL, NES_OP_ROR, NES_OP_RTI,
+    NES_OP_RTS, NES_OP_SBC, NES_OP_SEC, NES_OP_SED, NES_OP_SEI, NES_OP_STA,
+    NES_OP_STX, NES_OP_STY, NES_OP_TAX, NES_OP_TAY, NES_OP_TSX, NES_OP_TXA,
+    NES_OP_TXS, NES_OP_TYA,
+    NES_OP_COUNT,
+} nes_op;
+
+typedef struct {
+    u8 op;              /* nes_op */
+    u8 mode;            /* nes_addr_mode */
+    u8 access;          /* nes_access */
+    bool official;
+} nes_opcode;
+
 typedef struct {
     u8 a;
     u8 x;
@@ -65,6 +87,9 @@ typedef struct {
     u16 pc;
 
     u64 cycles;
+
+    bool nmi_pending;   /* edge triggered, latched until serviced */
+    bool irq_line;      /* level held by the APU or a mapper */
 
     nes_cpu_bus bus;
 } nes_cpu;
@@ -96,6 +121,20 @@ nes_operand nes_cpu_resolve_operand(nes_cpu *cpu, nes_addr_mode mode,
 
 u8 nes_addr_mode_operand_size(nes_addr_mode mode);
 const char *nes_addr_mode_name(nes_addr_mode mode);
+
+/* Loads PC from the reset vector and costs 7 cycles. Call before stepping. */
+void nes_cpu_reset(nes_cpu *cpu);
+
+/* Latches an NMI. Holds or releases the IRQ level. */
+void nes_cpu_nmi(nes_cpu *cpu);
+void nes_cpu_set_irq(nes_cpu *cpu, bool held);
+
+/* Runs one instruction, or services a pending interrupt first. Returns the
+   cycles consumed. */
+u32 nes_cpu_step(nes_cpu *cpu);
+
+const nes_opcode *nes_cpu_opcode(u8 opcode);
+const char *nes_op_name(nes_op op);
 
 static inline bool nes_cpu_flag(const nes_cpu *cpu, u8 flag) {
     return (cpu->p & flag) != 0;

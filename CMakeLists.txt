@@ -13,6 +13,7 @@ find_package(SDL2 REQUIRED)
 add_executable(nesemu
     src/cart.c
     src/cpu.c
+    src/cpu_ops.c
     src/main.c
 )
 
